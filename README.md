@@ -25,4 +25,12 @@ $ hydrogen install bootstrap --bower --save
 $ hydrogen freeze
 ```
 
+
+### Credits
+
+This project uses code (currently, only the ``werkzeug.utils.secure_filename``
+function) written by the [Werkzeug] team, which is licensed under the [BSD
+3-clause license](https://github.com/mitsuhiko/werkzeug/blob/master/LICENSE).
+
 [Bower]: http://bower.io
+[Werkzeug]: http://werkzeug.pocoo.org
