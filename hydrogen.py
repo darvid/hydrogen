@@ -340,8 +340,8 @@ class Requirements(set):
         self.clear()
         with requirements_file.open() as f:
             lines = re.findall(Requirement.spec_regex, f.read(), re.MULTILINE)
-            map(self.add, map(
-                lambda line: Requirement(line[0], "".join(line[1:])), lines))
+            for line in lines:
+                self.add(Requirement(line[0], "".join(line[1:])))
         if isinstance(requirements_file, (text_type, Path)):
             self.filename = requirements_file
 
@@ -419,7 +419,8 @@ class GroupedRequirements(defaultdict):
             return self.save(filename)
         with filename.open() as f:
             for group, requirements in yaml.load(f.read()).items():
-                map(self[group].add, map(Requirement.coerce, requirements))
+                for requirement in requirements:
+                    self[group].add(Requirement.coerce(requirement))
         self.filename = filename
 
     def save(self, filename=None):
