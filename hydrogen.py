@@ -291,8 +291,8 @@ class Requirement(object):
                 installed_packages[self.package].version)
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__)
-                and other.package == self.package)
+        return (isinstance(other, self.__class__) and
+                other.package == self.package)
 
     def __hash__(self):
         return hash(self.package)
@@ -497,8 +497,8 @@ class Hydrogen(object):
             dest_path = PurePath(
                 bower_json["name"],
                 *PurePath(path).parts[1:])
-            if (any(map(lambda p: p in ignored, PurePath(path).parents))
-                    or path in ignored):
+            if (any(map(lambda p: p in ignored, PurePath(path).parents)) or
+                    path in ignored):
                 continue
             if path.endswith("/"):
                 if list(path_spec.match_files([str(dest_path)])):
@@ -521,8 +521,8 @@ class Hydrogen(object):
         if parsed_url.scheme == "git" or parsed_url.path.endswith(".git"):
             if parsed_url.netloc == "github.com":
                 user, repo = parsed_url.path[1:-4].split("/")
-                response = get(github_api_uri
-                               + "/repos/{}/{}/tags".format(user, repo))
+                response = get(github_api_uri +
+                               "/repos/{}/{}/tags".format(user, repo))
                 tags = response.json()
                 target = None
                 if not len(tags):
