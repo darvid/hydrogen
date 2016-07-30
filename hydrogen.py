@@ -319,7 +319,7 @@ class Requirements(set):
         :param replace: if `True`, packages in the set with the same name will
             be removed first.
         """
-        if isinstance(elem, basestring):
+        if isinstance(elem, text_type):
             elem = Requirement.coerce(elem)
         if replace and elem in self:
             self.remove(elem)
@@ -335,14 +335,14 @@ class Requirements(set):
             requirements_file = self.filename
             if requirements_file is None:
                 raise ValueError("no filename provided")
-        elif isinstance(requirements_file, basestring):
-            requirements_file = Path(basestring)
+        elif isinstance(requirements_file, text_type):
+            requirements_file = Path(requirements_file)
         self.clear()
         with requirements_file.open() as f:
             lines = re.findall(Requirement.spec_regex, f.read(), re.MULTILINE)
             map(self.add, map(
                 lambda line: Requirement(line[0], "".join(line[1:])), lines))
-        if isinstance(requirements_file, (basestring, Path)):
+        if isinstance(requirements_file, (text_type, Path)):
             self.filename = requirements_file
 
     def remove(self, elem):
@@ -350,7 +350,7 @@ class Requirements(set):
 
         :param elem: a string or :class:`Requirement` instance.
         """
-        if isinstance(elem, basestring):
+        if isinstance(elem, text_type):
             for requirement in self:
                 if requirement.package == elem:
                     return super(Requirements, self).remove(requirement)
@@ -650,7 +650,7 @@ def freeze(h, output_yaml, resolve, groups):
         groups = filter(lambda group: not group.lower().startswith("bower"),
                         h.requirements.keys())
     else:
-        groups = map(unicode.strip, groups.split(","))
+        groups = list(map(text_type.strip, groups.split(",")))
     if output_yaml:
         for requirements in h.requirements.values():
             for requirement in requirements:
@@ -677,8 +677,8 @@ def freeze(h, output_yaml, resolve, groups):
 @click.argument("packages", nargs=-1)
 def install(h, pip, groups, save, save_dev, packages):
     """Install a pip or bower package."""
-    groups = (map(unicode.strip, groups.split(","))
-              if groups else h.requirements.keys())
+    groups = list(map(text_type.strip, groups.split(","))
+                  if groups else h.requirements.keys())
     if not packages:
         for group in groups:
             if group not in h.requirements:
