@@ -550,11 +550,9 @@ class Hydrogen(object):
                     dest=dest,
                     version=version)
             raise NotImplementedError
-            print("git clone {url} {dest}".format(url=url, dest=dest))
             click.echo("git clone {url}".format(url=url))
             cmd = envoy.run('git clone {url} "{dest}"'.format(
                 url=url, dest=dest))
-            print cmd.status_code, cmd.std_err
         elif parsed_url.scheme in ("http", "https"):
             zip_dest = download_file(url, dest=self.temp_dir,
                                      label="{dest_basename}",
