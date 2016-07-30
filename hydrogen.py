@@ -19,7 +19,7 @@ import re
 import shutil
 import sys
 import tempfile
-import urlparse
+
 import yaml
 import zipfile
 
@@ -42,7 +42,12 @@ debug = True
 
 # borrowed from werkzeug._compat
 PY2 = sys.version_info[0] == 2
-text_type = unicode if PY2 else str
+if PY2:
+    from urlparse import urlparse
+    text_type = unicode  # noqa: Undefined in py3
+else:
+    from urllib.parse import urlparse
+    text_type = str
 
 
 class InvalidRequirementSpecError(Exception):
@@ -511,7 +516,7 @@ class Hydrogen(object):
     def get_bower_package(self, url, dest=None, version=None,
                           process_deps=True):
         dest = dest or Path(".") / "assets"
-        parsed_url = urlparse.urlparse(url)
+        parsed_url = urlparse(url)
         if parsed_url.scheme == "git" or parsed_url.path.endswith(".git"):
             if parsed_url.netloc == "github.com":
                 user, repo = parsed_url.path[1:-4].split("/")
