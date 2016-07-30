@@ -429,7 +429,7 @@ class GroupedRequirements(defaultdict):
 
     @property
     def serialized(self):
-        return {group: map(str, requirements)
+        return {group: list(map(str, requirements))
                 for group, requirements in self.items()}
 
     @property
@@ -487,7 +487,7 @@ class Hydrogen(object):
                 url = Bower.get_package_url(package)
                 deps_installed.extend(self.get_bower_package(
                     url, dest=dest, version=version))
-        ignore_patterns = map(GitIgnorePattern, bower_json["ignore"])
+        ignore_patterns = list(map(GitIgnorePattern, bower_json["ignore"]))
         path_spec = PathSpec(ignore_patterns)
         namelist = [path for path in zip_file.namelist()
                     if PurePath(path).parts[0] == root]
@@ -578,9 +578,9 @@ class Hydrogen(object):
         """
         requirement = Requirement.coerce(package)
         url = Bower.get_package_url(requirement.package)
-        installed = map(
-            lambda (name, version): Requirement(name, requirement.version),
-            self.get_bower_package(url))
+        installed = list(map(lambda name, version:
+                             Requirement(name, requirement.version),
+                             self.get_bower_package(url)))
         for requirement in installed:
             if save:
                 self.requirements["bower"].add(requirement, replace=True)
