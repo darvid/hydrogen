@@ -19,7 +19,7 @@ import re
 import shutil
 import sys
 import tempfile
-import urlparse
+
 import yaml
 import zipfile
 
@@ -42,7 +42,12 @@ debug = True
 
 # borrowed from werkzeug._compat
 PY2 = sys.version_info[0] == 2
-text_type = unicode if PY2 else str
+if PY2:
+    from urlparse import urlparse
+    text_type = unicode  # noqa: Undefined in py3
+else:
+    from urllib.parse import urlparse
+    text_type = str
 
 
 class InvalidRequirementSpecError(Exception):
@@ -286,8 +291,8 @@ class Requirement(object):
                 installed_packages[self.package].version)
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__)
-                and other.package == self.package)
+        return (isinstance(other, self.__class__) and
+                other.package == self.package)
 
     def __hash__(self):
         return hash(self.package)
@@ -314,7 +319,7 @@ class Requirements(set):
         :param replace: if `True`, packages in the set with the same name will
             be removed first.
         """
-        if isinstance(elem, basestring):
+        if isinstance(elem, text_type):
             elem = Requirement.coerce(elem)
         if replace and elem in self:
             self.remove(elem)
@@ -330,14 +335,14 @@ class Requirements(set):
             requirements_file = self.filename
             if requirements_file is None:
                 raise ValueError("no filename provided")
-        elif isinstance(requirements_file, basestring):
-            requirements_file = Path(basestring)
+        elif isinstance(requirements_file, text_type):
+            requirements_file = Path(requirements_file)
         self.clear()
         with requirements_file.open() as f:
             lines = re.findall(Requirement.spec_regex, f.read(), re.MULTILINE)
-            map(self.add, map(
-                lambda line: Requirement(line[0], "".join(line[1:])), lines))
-        if isinstance(requirements_file, (basestring, Path)):
+            for line in lines:
+                self.add(Requirement(line[0], "".join(line[1:])))
+        if isinstance(requirements_file, (text_type, Path)):
             self.filename = requirements_file
 
     def remove(self, elem):
@@ -345,7 +350,7 @@ class Requirements(set):
 
         :param elem: a string or :class:`Requirement` instance.
         """
-        if isinstance(elem, basestring):
+        if isinstance(elem, text_type):
             for requirement in self:
                 if requirement.package == elem:
                     return super(Requirements, self).remove(requirement)
@@ -414,7 +419,8 @@ class GroupedRequirements(defaultdict):
             return self.save(filename)
         with filename.open() as f:
             for group, requirements in yaml.load(f.read()).items():
-                map(self[group].add, map(Requirement.coerce, requirements))
+                for requirement in requirements:
+                    self[group].add(Requirement.coerce(requirement))
         self.filename = filename
 
     def save(self, filename=None):
@@ -424,7 +430,7 @@ class GroupedRequirements(defaultdict):
 
     @property
     def serialized(self):
-        return {group: map(str, requirements)
+        return {group: list(map(str, requirements))
                 for group, requirements in self.items()}
 
     @property
@@ -482,7 +488,7 @@ class Hydrogen(object):
                 url = Bower.get_package_url(package)
                 deps_installed.extend(self.get_bower_package(
                     url, dest=dest, version=version))
-        ignore_patterns = map(GitIgnorePattern, bower_json["ignore"])
+        ignore_patterns = list(map(GitIgnorePattern, bower_json["ignore"]))
         path_spec = PathSpec(ignore_patterns)
         namelist = [path for path in zip_file.namelist()
                     if PurePath(path).parts[0] == root]
@@ -491,8 +497,8 @@ class Hydrogen(object):
             dest_path = PurePath(
                 bower_json["name"],
                 *PurePath(path).parts[1:])
-            if (any(map(lambda p: p in ignored, PurePath(path).parents))
-                    or path in ignored):
+            if (any(map(lambda p: p in ignored, PurePath(path).parents)) or
+                    path in ignored):
                 continue
             if path.endswith("/"):
                 if list(path_spec.match_files([str(dest_path)])):
@@ -511,12 +517,12 @@ class Hydrogen(object):
     def get_bower_package(self, url, dest=None, version=None,
                           process_deps=True):
         dest = dest or Path(".") / "assets"
-        parsed_url = urlparse.urlparse(url)
+        parsed_url = urlparse(url)
         if parsed_url.scheme == "git" or parsed_url.path.endswith(".git"):
             if parsed_url.netloc == "github.com":
                 user, repo = parsed_url.path[1:-4].split("/")
-                response = get(github_api_uri
-                               + "/repos/{}/{}/tags".format(user, repo))
+                response = get(github_api_uri +
+                               "/repos/{}/{}/tags".format(user, repo))
                 tags = response.json()
                 target = None
                 if not len(tags):
@@ -544,11 +550,9 @@ class Hydrogen(object):
                     dest=dest,
                     version=version)
             raise NotImplementedError
-            print("git clone {url} {dest}".format(url=url, dest=dest))
             click.echo("git clone {url}".format(url=url))
             cmd = envoy.run('git clone {url} "{dest}"'.format(
                 url=url, dest=dest))
-            print cmd.status_code, cmd.std_err
         elif parsed_url.scheme in ("http", "https"):
             zip_dest = download_file(url, dest=self.temp_dir,
                                      label="{dest_basename}",
@@ -573,9 +577,9 @@ class Hydrogen(object):
         """
         requirement = Requirement.coerce(package)
         url = Bower.get_package_url(requirement.package)
-        installed = map(
-            lambda (name, version): Requirement(name, requirement.version),
-            self.get_bower_package(url))
+        installed = list(map(lambda name, version:
+                             Requirement(name, requirement.version),
+                             self.get_bower_package(url)))
         for requirement in installed:
             if save:
                 self.requirements["bower"].add(requirement, replace=True)
@@ -645,7 +649,7 @@ def freeze(h, output_yaml, resolve, groups):
         groups = filter(lambda group: not group.lower().startswith("bower"),
                         h.requirements.keys())
     else:
-        groups = map(unicode.strip, groups.split(","))
+        groups = list(map(text_type.strip, groups.split(",")))
     if output_yaml:
         for requirements in h.requirements.values():
             for requirement in requirements:
@@ -672,8 +676,8 @@ def freeze(h, output_yaml, resolve, groups):
 @click.argument("packages", nargs=-1)
 def install(h, pip, groups, save, save_dev, packages):
     """Install a pip or bower package."""
-    groups = (map(unicode.strip, groups.split(","))
-              if groups else h.requirements.keys())
+    groups = list(map(text_type.strip, groups.split(","))
+                  if groups else h.requirements.keys())
     if not packages:
         for group in groups:
             if group not in h.requirements:
