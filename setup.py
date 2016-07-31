@@ -1,16 +1,24 @@
-import os
+#!/usr/bin/env python
+"""Hydrogen is a package management workflow tool for Python."""
 import sys
-from setuptools import setup
+
+import setuptools
 
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+def setup():  # NOQA
+    requires = ["six", "pbr>=1.9", "setuptools>=17.1"]
+    needs_sphinx = {
+        "build_sphinx",
+        "docs",
+        "upload_docs",
+    }.intersection(sys.argv)
+    if needs_sphinx:
+        requires.append("sphinx")
+    setuptools.setup(
+        setup_requires=requires,
+        pbr=True,
+    )
 
 
-setup(
-    name="hydrogen",
-    version=__import__("hydrogen").__version__,
-    long_description=__doc__,
-    entry_points={
-        "console_scripts": ["hydrogen=hydrogen:main"],
-    },
-)
+if __name__ == "__main__":
+    setup()
