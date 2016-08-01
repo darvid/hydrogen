@@ -339,11 +339,17 @@ class Requirements(set):
             requirements_file = Path(requirements_file)
         self.clear()
         with requirements_file.open() as f:
-            lines = re.findall(Requirement.spec_regex, f.read(), re.MULTILINE)
-            for line in lines:
-                self.add(Requirement(line[0], "".join(line[1:])))
+            self.loads(f.read())
+
         if isinstance(requirements_file, (text_type, Path)):
             self.filename = requirements_file
+
+    def loads(self, requirements_text):
+        lines = re.findall(Requirement.spec_regex,
+                           requirements_text,
+                           re.MULTILINE)
+        for line in lines:
+            self.add(Requirement(line[0], "".join(line[1:])))
 
     def remove(self, elem):
         """Remove a requirement.
@@ -404,7 +410,7 @@ class GroupedRequirements(defaultdict):
             path = Path(requirements_txt)
             if not path.exists() and group.lower() == "all" and freeze:
                 cmd = envoy.run("pip freeze")
-                self[group].load(cmd.std_out)
+                self[group].loads(cmd.std_out)
             elif path.exists():
                 self[group].load(path)
 
